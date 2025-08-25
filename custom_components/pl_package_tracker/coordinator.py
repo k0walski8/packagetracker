@@ -1,5 +1,6 @@
 
 from __future__ import annotations
+import logging
 from datetime import timedelta
 from typing import Any, Dict, List
 
@@ -13,7 +14,7 @@ class PackageDataCoordinator(DataUpdateCoordinator[Dict[str, Any]]):
     def __init__(self, hass: HomeAssistant, entry):
         super().__init__(
             hass,
-            hass.helpers.event.async_call_later.__self__,  # logger
+            logging.getLogger(__name__),
             name="PL Package Tracker",
             update_interval=timedelta(minutes=UPDATE_INTERVAL_MIN),
         )

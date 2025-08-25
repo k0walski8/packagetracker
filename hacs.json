@@ -1,0 +1,12 @@
+{
+  "name": "Polish Package Tracker (DHL + InPost)",
+  "render_readme": true,
+  "domains": [
+    "pl_package_tracker"
+  ],
+  "homeassistant": "2023.9.0",
+  "country": [
+    "PL"
+  ],
+  "content_in_root": false
+}
