@@ -1,7 +1,7 @@
 {
   "domain": "packagetracker",
   "name": "Package Tracker (PL)",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "documentation": "https://example.com/packagetracker",
   "issue_tracker": "https://example.com/packagetracker/issues",
   "codeowners": [
