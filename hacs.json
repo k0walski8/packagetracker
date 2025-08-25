@@ -1,0 +1,8 @@
+{
+  "name": "Package Tracker (PL)",
+  "content_in_root": false,
+  "render_readme": true,
+  "domains": [
+    "integration"
+  ]
+}

@@ -1,0 +1,112 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Package Tracker</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 24px; }
+    h1 { font-size: 20px; margin-bottom: 12px; }
+    .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
+    label { display: block; font-size: 12px; color: #555; }
+    input, select { padding: 8px; font-size: 14px; }
+    button { padding: 8px 12px; cursor: pointer; }
+    table { border-collapse: collapse; width: 100%; margin-top: 16px; }
+    th, td { border-bottom: 1px solid #ddd; padding: 8px; font-size: 14px; text-align: left; }
+    .badge { padding: 2px 8px; border-radius: 12px; background: #eee; font-size: 12px; }
+    .ok { color: #0a0; }
+    .err { color: #a00; }
+  </style>
+</head>
+<body>
+  <h1>Package Tracker – Add Packages</h1>
+  <div class="row">
+    <div>
+      <label for="provider">Provider</label>
+      <select id="provider">
+        <option value="inpost">InPost (parcel locker)</option>
+        <option value="dhl">DHL (courier)</option>
+      </select>
+    </div>
+    <div>
+      <label for="tracking">Tracking number</label>
+      <input id="tracking" placeholder="e.g. 1234567890 or JD..." />
+    </div>
+    <div>
+      <label for="name">Friendly name (optional)</label>
+      <input id="name" placeholder="Shoes from Zalando" />
+    </div>
+    <div>
+      <button id="add">Add</button>
+    </div>
+  </div>
+
+  <p id="msg"></p>
+
+  <h2>Current packages</h2>
+  <table id="tbl">
+    <thead><tr><th>Name</th><th>Provider</th><th>Tracking</th><th></th></tr></thead>
+    <tbody></tbody>
+  </table>
+
+<script>
+async function api(path, method='GET', body) {
+  const resp = await fetch('/api/packagetracker' + path, {
+    method,
+    headers: {'Content-Type': 'application/json'},
+    body: body ? JSON.stringify(body) : undefined,
+    credentials: 'include',
+  });
+  const text = await resp.text();
+  try { return {status: resp.status, data: JSON.parse(text)}; }
+  catch(e) { return {status: resp.status, data: text}; }
+}
+async function refresh() {
+  const res = await api('/list');
+  const tbody = document.querySelector('#tbl tbody');
+  tbody.innerHTML = '';
+  if (res.status !== 200) {
+    document.querySelector('#msg').textContent = 'Error loading packages';
+    document.querySelector('#msg').className = 'err';
+    return;
+  }
+  res.data.packages.forEach(p => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${p.name || ''}</td><td><span class="badge">${p.provider.toUpperCase()}</span></td><td>${p.tracking_number}</td><td><button data-p='${JSON.stringify(p)}'>Delete</button></td>`;
+    tbody.appendChild(tr);
+  });
+  document.querySelectorAll('button[data-p]').forEach(btn => {
+    btn.onclick = async () => {
+      const p = JSON.parse(btn.getAttribute('data-p'));
+      const r = await api('/delete', 'POST', {provider: p.provider, tracking_number: p.tracking_number});
+      if (r.status === 200) {
+        document.querySelector('#msg').textContent = 'Deleted.';
+        document.querySelector('#msg').className = 'ok';
+        refresh();
+      } else {
+        document.querySelector('#msg').textContent = 'Delete failed: ' + (r.data && r.data.message || r.data || r.status);
+        document.querySelector('#msg').className = 'err';
+      }
+    }
+  });
+}
+document.querySelector('#add').onclick = async () => {
+  const provider = document.querySelector('#provider').value;
+  const tracking = document.querySelector('#tracking').value.trim();
+  const name = document.querySelector('#name').value.trim();
+  const res = await api('/add', 'POST', {provider, tracking_number: tracking, name});
+  if (res.status === 200) {
+    document.querySelector('#msg').textContent = 'Added! Sensors will appear after the next refresh.';
+    document.querySelector('#msg').className = 'ok';
+    document.querySelector('#tracking').value = '';
+    document.querySelector('#name').value = '';
+    refresh();
+  } else {
+    document.querySelector('#msg').textContent = 'Add failed: ' + (res.data && res.data.message || res.data || res.status);
+    document.querySelector('#msg').className = 'err';
+  }
+};
+refresh();
+</script>
+</body>
+</html>

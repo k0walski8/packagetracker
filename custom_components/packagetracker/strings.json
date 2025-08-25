@@ -1,0 +1,11 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "description": "Click Submit to install. Open the left sidebar panel **Package Tracker** to add packages."
+      }
+    },
+    "abort": {},
+    "error": {}
+  }
+}

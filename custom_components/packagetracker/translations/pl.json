@@ -1,0 +1,9 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "description": "Kliknij Zatwierdź, aby zainstalować. Otwórz panel **Package Tracker** w lewym menu, aby dodać przesyłki."
+      }
+    }
+  }
+}
