@@ -14,7 +14,7 @@ from .http import async_register_http_panel_and_routes
 
 _LOGGER = logging.getLogger(__name__)
 
-type HomeAssistantConfigEntry = ConfigEntry
+# Removed 3.12-only type alias for HA compatibility
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up the integration from a config entry."""

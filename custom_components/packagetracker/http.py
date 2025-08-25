@@ -9,7 +9,13 @@ from homeassistant.components import frontend, http
 from homeassistant.components.http import HomeAssistantView
 from homeassistant.core import HomeAssistant
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.util.slugify import slugify
+import re
+
+def _local_slugify(value: str) -> str:
+    value = (value or "").lower()
+    value = re.sub(r"[^a-z0-9]+", "-", value)
+    return value.strip("-")
+
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.const import HTTP_UNPROCESSABLE_ENTITY
 
@@ -90,7 +96,7 @@ class PackageAddView(HomeAssistantView):
         if not provider or not tracking:
             return self.json_message("provider must be 'dhl' or 'inpost' and tracking_number required", status_code=HTTP_UNPROCESSABLE_ENTITY)
 
-        pkg_id = slugify(f"{provider}-{tracking}")
+        pkg_id = _local_slugify(f"{provider}-{tracking}")
         store = self.hass.data[DOMAIN][self.entry.entry_id]["store"]
         data = await store.async_load() or {}
         pkgs = data.get("packages", [])
@@ -138,7 +144,7 @@ class PackageDeleteView(HomeAssistantView):
         if not provider or not tracking:
             return self.json_message("provider and tracking_number required", status_code=HTTP_UNPROCESSABLE_ENTITY)
 
-        pkg_id = slugify(f"{provider}-{tracking}")
+        pkg_id = _local_slugify(f"{provider}-{tracking}")
         store = self.hass.data[DOMAIN][self.entry.entry_id]["store"]
         data = await store.async_load() or {}
         pkgs = data.get("packages", [])
