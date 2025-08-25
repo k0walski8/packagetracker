@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import voluptuous as vol
+from homeassistant.helpers import config_validation as cv
 from homeassistant import config_entries
 from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
@@ -47,7 +48,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
 class OptionsFlowHandler(config_entries.OptionsFlow):
     def __init__(self, config_entry):
-        self.config_entry = config_entry
+        self._entry = config_entry
         self._packages = dict(config_entry.options.get(CONF_PACKAGES, {}))
 
     async def async_step_init(self, user_input=None) -> FlowResult:
@@ -70,9 +71,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         if not numbers:
             return await self._save_and_exit()
 
-        schema = vol.Schema({
-            vol.Required("numbers", default=[]): vol.All(list, [vol.In(numbers)])
-        })
+        schema = vol.Schema({ vol.Required("numbers", default=[]): cv.multi_select({n: n for n in numbers}) })
         if user_input is not None:
             for n in user_input.get("numbers", []):
                 self._packages.pop(n, None)
@@ -81,6 +80,6 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         return self.async_show_form(step_id="remove", data_schema=schema)
 
     async def _save_and_exit(self) -> FlowResult:
-        options = dict(self.config_entry.options)
+        options = dict(self._entry.options)
         options[CONF_PACKAGES] = self._packages
         return self.async_create_entry(title="", data=options)
