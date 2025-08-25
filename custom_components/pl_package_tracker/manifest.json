@@ -1,0 +1,15 @@
+{
+  "domain": "pl_package_tracker",
+  "name": "Polish Package Tracker (DHL + InPost)",
+  "version": "0.1.0",
+  "documentation": "https://example.com/pl_package_tracker-docs",
+  "issue_tracker": "https://example.com/pl_package_tracker-issues",
+  "codeowners": [
+    "@you"
+  ],
+  "requirements": [
+    "beautifulsoup4==4.12.3"
+  ],
+  "iot_class": "cloud_polling",
+  "config_flow": true
+}

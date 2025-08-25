@@ -1,0 +1,33 @@
+
+add_package:
+  name: Add package
+  description: Add a package to track (same as Options flow).
+  fields:
+    carrier:
+      example: dhl
+      required: true
+      selector:
+        select:
+          options:
+            - dhl
+            - inpost
+    number:
+      example: "1234567890"
+      required: true
+      selector:
+        text:
+    name:
+      example: "Gift for Mom"
+      required: false
+      selector:
+        text:
+
+remove_package:
+  name: Remove package
+  description: Stop tracking a package.
+  fields:
+    number:
+      example: "1234567890"
+      required: true
+      selector:
+        text:

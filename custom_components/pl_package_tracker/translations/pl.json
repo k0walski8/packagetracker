@@ -1,0 +1,54 @@
+{
+  "title": "Polski Śledzik Paczek",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Dodaj pierwszą paczkę",
+        "description": "Śledź przesyłki DHL (kurier) i InPost (Paczkomat). Więcej dodasz później w Opcjach.",
+        "data": {
+          "carrier": "Przewoźnik",
+          "number": "Numer śledzenia",
+          "name": "Przyjazna nazwa (opcjonalnie)"
+        }
+      },
+      "confirm": {
+        "title": "Dodać kolejną?",
+        "description": "Paczka {number} dodana. Czy chcesz dodać kolejną teraz?",
+        "data": {
+          "add_more": "Dodaj następną"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "Integracja jest już skonfigurowana."
+    },
+    "error": {
+      "invalid_number": "Numer wygląda na nieprawidłowy dla wybranego przewoźnika.",
+      "unknown": "Nieoczekiwany błąd."
+    },
+    "options_step": {
+      "menu": {
+        "title": "Zarządzaj paczkami",
+        "description": "Dodaj lub usuń przesyłki do śledzenia.",
+        "menu_options": {
+          "add": "Dodaj paczkę",
+          "remove": "Usuń paczki"
+        }
+      },
+      "add": {
+        "title": "Dodaj paczkę",
+        "data": {
+          "carrier": "Przewoźnik",
+          "number": "Numer śledzenia",
+          "name": "Przyjazna nazwa (opcjonalnie)"
+        }
+      },
+      "remove": {
+        "title": "Usuń paczki",
+        "data": {
+          "numbers": "Wybierz paczki do usunięcia"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "title": "Polish Package Tracker",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Add your first package",
+        "description": "Track DHL courier and InPost parcel locker shipments. You can add more later in Options.",
+        "data": {
+          "carrier": "Carrier",
+          "number": "Tracking number",
+          "name": "Friendly name (optional)"
+        }
+      },
+      "confirm": {
+        "title": "Add another?",
+        "description": "Package {number} added. Do you want to add another package now?",
+        "data": {
+          "add_more": "Add another"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "Integration already configured."
+    },
+    "error": {
+      "invalid_number": "That tracking number looks invalid for the selected carrier.",
+      "unknown": "Unexpected error. Please try again."
+    },
+    "options_step": {
+      "menu": {
+        "title": "Manage packages",
+        "description": "Add or remove packages to track.",
+        "menu_options": {
+          "add": "Add a package",
+          "remove": "Remove packages"
+        }
+      },
+      "add": {
+        "title": "Add a package",
+        "data": {
+          "carrier": "Carrier",
+          "number": "Tracking number",
+          "name": "Friendly name (optional)"
+        }
+      },
+      "remove": {
+        "title": "Remove packages",
+        "data": {
+          "numbers": "Choose packages to remove"
+        }
+      }
+    }
+  }
+}
