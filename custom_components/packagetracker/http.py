@@ -17,8 +17,6 @@ def _local_slugify(value: str) -> str:
     return value.strip("-")
 
 from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.const import HTTP_UNPROCESSABLE_ENTITY
-
 from .const import DOMAIN, SIGNAL_NEW_PACKAGE, PROVIDER_DHL, PROVIDER_INPOST
 
 _LOGGER = logging.getLogger(__name__)
@@ -88,13 +86,13 @@ class PackageAddView(HomeAssistantView):
         try:
             payload = await request.json()
         except Exception:
-            return self.json_message("Invalid JSON", status_code=HTTP_UNPROCESSABLE_ENTITY)
+            return self.json_message("Invalid JSON", status_code=422)
         provider = _validate_provider(payload.get("provider"))
         tracking = (payload.get("tracking_number") or "").strip()
         name = (payload.get("name") or "").strip()
 
         if not provider or not tracking:
-            return self.json_message("provider must be 'dhl' or 'inpost' and tracking_number required", status_code=HTTP_UNPROCESSABLE_ENTITY)
+            return self.json_message("provider must be 'dhl' or 'inpost' and tracking_number required", status_code=422)
 
         pkg_id = _local_slugify(f"{provider}-{tracking}")
         store = self.hass.data[DOMAIN][self.entry.entry_id]["store"]
@@ -102,7 +100,7 @@ class PackageAddView(HomeAssistantView):
         pkgs = data.get("packages", [])
 
         if any(p.get("id") == pkg_id for p in pkgs):
-            return self.json_message("Package already exists", status_code=HTTP_UNPROCESSABLE_ENTITY)
+            return self.json_message("Package already exists", status_code=422)
 
         pkg = {
             "id": pkg_id,
@@ -137,12 +135,12 @@ class PackageDeleteView(HomeAssistantView):
         try:
             payload = await request.json()
         except Exception:
-            return self.json_message("Invalid JSON", status_code=HTTP_UNPROCESSABLE_ENTITY)
+            return self.json_message("Invalid JSON", status_code=422)
         provider = _validate_provider(payload.get("provider"))
         tracking = (payload.get("tracking_number") or "").strip()
 
         if not provider or not tracking:
-            return self.json_message("provider and tracking_number required", status_code=HTTP_UNPROCESSABLE_ENTITY)
+            return self.json_message("provider and tracking_number required", status_code=422)
 
         pkg_id = _local_slugify(f"{provider}-{tracking}")
         store = self.hass.data[DOMAIN][self.entry.entry_id]["store"]
@@ -150,7 +148,7 @@ class PackageDeleteView(HomeAssistantView):
         pkgs = data.get("packages", [])
         new_pkgs = [p for p in pkgs if p.get("id") != pkg_id]
         if len(new_pkgs) == len(pkgs):
-            return self.json_message("Not found", status_code=HTTP_UNPROCESSABLE_ENTITY)
+            return self.json_message("Not found", status_code=422)
 
         data["packages"] = new_pkgs
         await store.async_save(data)

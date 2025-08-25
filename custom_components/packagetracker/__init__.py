@@ -10,7 +10,7 @@ from homeassistant.helpers.storage import Store
 
 from .const import DOMAIN, PLATFORMS, STORAGE_VERSION
 from .coordinator import PackageUpdateCoordinator
-from .http import async_register_http_panel_and_routes
+# deferred import to avoid flow import issues
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -38,6 +38,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     # Register Web UI (panel) + REST endpoints to add/remove packages
+    from .http import async_register_http_panel_and_routes
     await async_register_http_panel_and_routes(hass, entry)
 
     return True
