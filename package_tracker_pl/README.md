@@ -36,9 +36,5 @@ Global counters:
   If parsing fails, the add-on keeps the previous status and tries again on the next cycle.
 - Make sure you have an MQTT broker configured in Home Assistant (e.g., Mosquitto) so Discovery can create entities.
 
-## Security
-- Tracking numbers are stored in the add-on's `/data/packages.json`.
-- If you expose Home Assistant externally, protect your instance with HTTPS and proper auth.
-
 ## License
 MIT

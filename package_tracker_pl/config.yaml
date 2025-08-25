@@ -1,6 +1,6 @@
 name: Advanced Package Tracker (PL)
 slug: package_tracker_pl
-version: "0.1.0"
+version: "0.1.1"
 description: >
   Tracks DHL (Poland) and InPost packages via scraping/API. Web UI to add/remove
   packages, MQTT Discovery sensors (detailed & summary) + today's delivery counters.

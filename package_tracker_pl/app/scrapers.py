@@ -27,14 +27,6 @@ def fetch_inpost(number: str) -> Tuple[str, Optional[date]]:
     detail_text = None
     eta_today = None
 
-    def _get(obj, keys, default=None):
-        for k in keys:
-            if isinstance(obj, dict) and k in obj:
-                obj = obj[k]
-            else:
-                return default
-        return obj
-
     details = data.get("tracking_details") or []
     if isinstance(details, list) and details:
         last = details[0]
@@ -47,7 +39,8 @@ def fetch_inpost(number: str) -> Tuple[str, Optional[date]]:
                     eta_today = dt.date()
             except Exception:
                 try:
-                    dt2 = datetime.strptime(str(eta), "%Y-%m-%d").date()
+                    from datetime import datetime as _dt
+                    dt2 = _dt.strptime(str(eta), "%Y-%m-%d").date()
                     if dt2 == datetime.now().date():
                         eta_today = dt2
                 except Exception:
@@ -85,7 +78,6 @@ def fetch_dhl(number: str) -> Tuple[str, Optional[date]]:
             break
 
     if not detail_text:
-        # Some DHL pages embed data in JSON; we keep it simple here.
         detail_text = "Nie udało się odczytać statusu (DHL); strona może wymagać JS"
 
     if re.search(r"(doręczenie.*dziś|dzisiaj|today)", html, flags=re.I):
