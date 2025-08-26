@@ -24,17 +24,49 @@ def _norm(s: Optional[str]) -> str:
 def _short_from_detail(detail: str) -> str:
     t = detail.lower()
     # Delivered
-    if any(k in t for k in ["delivered", "doręczono", "odebrano", "dostarczono"]):
+    if any(k in t for k in [
+        "delivered", 
+        "doręczono", 
+        "odebrano", 
+        "dostarczono",
+        "przesyłka doręczona do odbiorcy",
+        "the shipment has been successfully delivered"
+    ]):
         return "Delivered"
+    
     # Out for delivery (today)
-    if any(k in t for k in ["out_for_delivery", "w doręczeniu", "kurier w drodze", 
-                           "dzisiaj doręczenie", "przekazano do doręczenia", "in delivery"]):
+    if any(k in t for k in [
+        "out_for_delivery", 
+        "w doręczeniu", 
+        "kurier w drodze", 
+        "dzisiaj doręczenie", 
+        "przekazano do doręczenia", 
+        "in delivery",
+        "przesyłka przekazana kurierowi do doręczenia",
+        "the shipment has been loaded onto the delivery vehicle"
+    ]):
         return "In delivery Today"
+    
     # Label created / registered
-    if any(k in t for k in ["created", "confirmed", "utworzono", "przygotowana przez nadawcę",
-                           "zarejestrowano", "nadanie zarejestrowane"]):
+    if any(k in t for k in [
+        "created", 
+        "confirmed", 
+        "utworzono", 
+        "przygotowana przez nadawcę",
+        "zarejestrowano", 
+        "nadanie zarejestrowane",
+        "przesyłka przyjęta w terminalu nadawczym dhl"
+    ]):
         return "Label created"
+    
     # Transit / processing
+    if any(k in t for k in [
+        "przesyłka jest obsługiwana w centrum sortowania",
+        "the shipment has been processed in the parcel center"
+    ]):
+        return "In transit"
+    
+    # Default case for any other status
     return "In transit"
 
 async def fetch_dhl(session: ClientSession, number: str) -> Dict[str, Any]:
@@ -93,7 +125,18 @@ async def fetch_dhl(session: ClientSession, number: str) -> Dict[str, Any]:
                     
         if not status_text:
             patterns = [
+                # Delivery patterns
                 r"(Doręczono|W doręczeniu|W tranzycie|Nadanie|Przesyłka w drodze)",
+                r"(przesyłka doręczona do odbiorcy|the shipment has been successfully delivered)",
+                
+                # In transit patterns
+                r"(przesyłka jest obsługiwana w centrum sortowania|the shipment has been processed in the parcel center)",
+                r"(przesyłka przekazana kurierowi do doręczenia|the shipment has been loaded onto the delivery vehicle)",
+                
+                # Initial status patterns
+                r"(przesyłka przyjęta w terminalu nadawczym dhl)",
+                
+                # Generic patterns
                 r"(Delivered|Out for delivery|In transit|Shipment picked up)",
                 r"Status:?\s*([^<>\n]+)"
             ]
