@@ -4,6 +4,13 @@ import json
 import re
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
+from webdriver_manager.chrome import ChromeDriverManager
 
 from aiohttp.client import ClientSession
 from bs4 import BeautifulSoup
@@ -31,47 +38,89 @@ def _short_from_detail(detail: str) -> str:
     return "In transit"
 
 async def fetch_dhl(session: ClientSession, number: str) -> Dict[str, Any]:
-    url = DHL_URL.format(number=number)
-    headers = {
-        "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36"
-    }
+    # Setup Chrome options
+    chrome_options = Options()
+    chrome_options.add_argument("--headless")  # Run in headless mode
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
     
-    async with session.get(url, headers=headers) as resp:
-        text = await resp.text()
-    soup = BeautifulSoup(text, "html.parser")
-
-    # Try to find any obvious status text
-    status_text = ""
+    # Initialize the driver
+    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
     
-    # Check tracking status elements
-    status_elements = soup.select('.tracking-status, .status-text, .shipment-status')
-    for element in status_elements:
-        status_text = _norm(element.get_text(" ", strip=True))
-        if status_text:
-            break
-            
-    if not status_text:
-        # Alternative search for status in document
-        patterns = [
-            r"(Doręczono|W doręczeniu|W tranzycie|Nadanie|Przesyłka w drodze)",
-            r"(Delivered|Out for delivery|In transit|Shipment picked up)",
-            r"Status:?\s*([^<>\n]+)"
-        ]
+    try:
+        # Navigate to the tracking page
+        url = DHL_URL.format(number=number)
+        driver.get(url)
         
-        for pattern in patterns:
-            m = re.search(pattern, text, re.I)
-            if m:
-                status_text = m.group(1)
-                break
+        # Wait for and click the submit button
+        submit_button = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.CSS_SELECTOR, ".js--tracking--input-submit"))
+        )
+        submit_button.click()
+        
+        # Wait for status message element
+        WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, '.c-tracking-result--status-copy-message'))
+        )
+        
+        # Get the page source after JavaScript execution
+        text = driver.page_source
+        soup = BeautifulSoup(text, "html.parser")
+        
+        # Try to get status message and date
+        status_text = ""
+        date_text = ""
+        
+        # First try the main status message
+        status_element = soup.select_one('.c-tracking-result--status-copy-message')
+        if status_element:
+            status_text = _norm(status_element.get_text(" ", strip=True))
+            # Remove tracking number if present
+            status_text = re.sub(r',\s*Kod nadania przesyłki:.*$', '', status_text)
+            
+            # Try to get the date
+            date_element = soup.select_one('.c-tracking-result--status-copy-date')
+            if date_element:
+                date_text = _norm(date_element.get_text(" ", strip=True))
+                
+        # Fallback to other status elements if main one not found
+        if not status_text:
+            status_elements = soup.select('.tracking-status, .status-text, .shipment-status')
+            for element in status_elements:
+                status_text = _norm(element.get_text(" ", strip=True))
+                if status_text:
+                    break
+                    
+        if not status_text:
+            patterns = [
+                r"(Doręczono|W doręczeniu|W tranzycie|Nadanie|Przesyłka w drodze)",
+                r"(Delivered|Out for delivery|In transit|Shipment picked up)",
+                r"Status:?\s*([^<>\n]+)"
+            ]
+            
+            for pattern in patterns:
+                m = re.search(pattern, text, re.I)
+                if m:
+                    status_text = m.group(1)
+                    break
 
-    if not status_text:
-        status_text = "Unknown / parsing failed"
+        if not status_text:
+            status_text = "Unknown / parsing failed"
 
-    short = _short_from_detail(status_text)
+        # Combine status and date if available
+        detail = status_text
+        if date_text:
+            detail = f"{status_text} ({date_text})"
+
+    finally:
+        # Always close the browser
+        driver.quit()
+
+    short = _short_from_detail(detail)
     return {
         "carrier": "dhl",
         "number": number,
-        "detail": status_text,
+        "detail": detail,
         "short": short,
         "last_update": datetime.now(timezone.utc).isoformat()
     }
