@@ -4,9 +4,13 @@ import json
 import re
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
-from aiowebdriver.chrome import Chrome
-from aiowebdriver.support.ui import WebDriverWait
-from aiowebdriver.support import expected_conditions as EC
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
+from webdriver_manager.chrome import ChromeDriverManager
 
 from aiohttp.client import ClientSession
 from bs4 import BeautifulSoup
@@ -68,110 +72,92 @@ def _short_from_detail(detail: str) -> str:
 async def fetch_dhl(session: ClientSession, number: str) -> Dict[str, Any]:
     # Setup Chrome options
     chrome_options = Options()
-    chrome_options.add_argument("--headless")
+    chrome_options.add_argument("--headless")  # Run in headless mode
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
     
-    # Initialize the async driver
-    driver = await Chrome.launch(options=chrome_options)
+    # Initialize the driver
+    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
     
     try:
         # Navigate to the tracking page
         url = DHL_URL.format(number=number)
-        await driver.get(url)
+        driver.get(url)
         
         # Wait for and click the submit button
-        submit_button = await WebDriverWait(driver, 10).until(
+        submit_button = WebDriverWait(driver, 10).until(
             EC.element_to_be_clickable((By.CSS_SELECTOR, ".js--tracking--input-submit"))
         )
-        await submit_button.click()
+        submit_button.click()
         
         # Wait for status message element
-        await WebDriverWait(driver, 10).until(
+        WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.CSS_SELECTOR, '.c-tracking-result--status-copy-message'))
         )
         
         # Get the page source after JavaScript execution
-        text = await driver.page_source
-        
-        # Debug: Log the relevant HTML section
-        status_section = await driver.find_elements(By.CSS_SELECTOR, '.c-tracking-result--section')
-        if status_section:
-            print("Found status section:", (await status_section[0].text))
-        
+        text = driver.page_source
         soup = BeautifulSoup(text, "html.parser")
         
         # Try to get status message and date
         status_text = ""
         date_text = ""
         
-        # First try the main status message with more specific selector
+        # First try the main status message
         status_element = soup.select_one('.c-tracking-result--status-copy-message')
         if status_element:
-            print("Found status element:", status_element.text)
             status_text = _norm(status_element.get_text(" ", strip=True))
             # Remove tracking number if present
             status_text = re.sub(r',\s*Kod nadania przesyłki:.*$', '', status_text)
-            print("Cleaned status text:", status_text)
             
-            # Try to get the date with more specific selector
+            # Try to get the date
             date_element = soup.select_one('.c-tracking-result--status-copy-date')
             if date_element:
                 date_text = _norm(date_element.get_text(" ", strip=True))
-                print("Found date:", date_text)
-        else:
-            print("Status element not found with primary selector")
-
-        # If still no status, try alternative selectors
+                
+        # Fallback to other status elements if main one not found
         if not status_text:
-            print("Trying alternative selectors...")
-            alt_selectors = [
-                '.c-tracking-result--status h2',
-                '.c-tracking-result--status-copy-message',
-                '.tracking-status',
-                '.status-text',
-                '.shipment-status'
-            ]
-            
-            for selector in alt_selectors:
-                element = soup.select_one(selector)
-                if element:
-                    status_text = _norm(element.get_text(" ", strip=True))
-                    print(f"Found status with selector {selector}:", status_text)
+            status_elements = soup.select('.tracking-status, .status-text, .shipment-status')
+            for element in status_elements:
+                status_text = _norm(element.get_text(" ", strip=True))
+                if status_text:
                     break
                     
-        # Try regex patterns if still no status
         if not status_text:
-            print("Trying regex patterns...")
             patterns = [
-                # DHL specific patterns
-                r"przesyłka jest obsługiwana w centrum sortowania",
-                r"przesyłka przekazana kurierowi do doręczenia",
-                r"przesyłka doręczona do odbiorcy",
-                r"przesyłka przyjęta w terminalu nadawczym dhl",
-                # ...existing patterns...
+                # Delivery patterns
+                r"(Doręczono|W doręczeniu|W tranzycie|Nadanie|Przesyłka w drodze)",
+                r"(przesyłka doręczona do odbiorcy|the shipment has been successfully delivered)",
+                
+                # In transit patterns
+                r"(przesyłka jest obsługiwana w centrum sortowania|the shipment has been processed in the parcel center)",
+                r"(przesyłka przekazana kurierowi do doręczenia|the shipment has been loaded onto the delivery vehicle)",
+                
+                # Initial status patterns
+                r"(przesyłka przyjęta w terminalu nadawczym dhl)",
+                
+                # Generic patterns
+                r"(Delivered|Out for delivery|In transit|Shipment picked up)",
+                r"Status:?\s*([^<>\n]+)"
             ]
             
             for pattern in patterns:
                 m = re.search(pattern, text, re.I)
                 if m:
-                    status_text = m.group(0)
-                    print(f"Found status with pattern:", status_text)
+                    status_text = m.group(1)
                     break
 
         if not status_text:
-            print("Failed to extract status")
             status_text = "Unknown / parsing failed"
 
         # Combine status and date if available
         detail = status_text
         if date_text:
             detail = f"{status_text} ({date_text})"
-            
-        print(f"Final status: {detail}")
 
     finally:
-        await driver.quit()
+        # Always close the browser
+        driver.quit()
 
     short = _short_from_detail(detail)
     return {
@@ -248,3 +234,4 @@ async def fetch_inpost(session: ClientSession, number: str) -> Dict[str, Any]:
         "short": short,
         "last_update": datetime.now(timezone.utc).isoformat()
     }
+s
