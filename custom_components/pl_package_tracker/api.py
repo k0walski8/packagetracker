@@ -95,65 +95,87 @@ async def fetch_dhl(session: ClientSession, number: str) -> Dict[str, Any]:
             EC.presence_of_element_located((By.CSS_SELECTOR, '.c-tracking-result--status-copy-message'))
         )
         
+        # Add debug logging
+        print(f"Extracting status for DHL package {number}")
+        
         # Get the page source after JavaScript execution
         text = driver.page_source
+        
+        # Debug: Log the relevant HTML section
+        status_section = driver.find_elements(By.CSS_SELECTOR, '.c-tracking-result--section')
+        if status_section:
+            print("Found status section:", status_section[0].text)
+        
         soup = BeautifulSoup(text, "html.parser")
         
         # Try to get status message and date
         status_text = ""
         date_text = ""
         
-        # First try the main status message
+        # First try the main status message with more specific selector
         status_element = soup.select_one('.c-tracking-result--status-copy-message')
         if status_element:
+            print("Found status element:", status_element.text)
             status_text = _norm(status_element.get_text(" ", strip=True))
             # Remove tracking number if present
             status_text = re.sub(r',\s*Kod nadania przesyłki:.*$', '', status_text)
+            print("Cleaned status text:", status_text)
             
-            # Try to get the date
+            # Try to get the date with more specific selector
             date_element = soup.select_one('.c-tracking-result--status-copy-date')
             if date_element:
                 date_text = _norm(date_element.get_text(" ", strip=True))
-                
-        # Fallback to other status elements if main one not found
+                print("Found date:", date_text)
+        else:
+            print("Status element not found with primary selector")
+
+        # If still no status, try alternative selectors
         if not status_text:
-            status_elements = soup.select('.tracking-status, .status-text, .shipment-status')
-            for element in status_elements:
-                status_text = _norm(element.get_text(" ", strip=True))
-                if status_text:
+            print("Trying alternative selectors...")
+            alt_selectors = [
+                '.c-tracking-result--status h2',
+                '.c-tracking-result--status-copy-message',
+                '.tracking-status',
+                '.status-text',
+                '.shipment-status'
+            ]
+            
+            for selector in alt_selectors:
+                element = soup.select_one(selector)
+                if element:
+                    status_text = _norm(element.get_text(" ", strip=True))
+                    print(f"Found status with selector {selector}:", status_text)
                     break
                     
+        # Try regex patterns if still no status
         if not status_text:
+            print("Trying regex patterns...")
             patterns = [
-                # Delivery patterns
-                r"(Doręczono|W doręczeniu|W tranzycie|Nadanie|Przesyłka w drodze)",
-                r"(przesyłka doręczona do odbiorcy|the shipment has been successfully delivered)",
-                
-                # In transit patterns
-                r"(przesyłka jest obsługiwana w centrum sortowania|the shipment has been processed in the parcel center)",
-                r"(przesyłka przekazana kurierowi do doręczenia|the shipment has been loaded onto the delivery vehicle)",
-                
-                # Initial status patterns
-                r"(przesyłka przyjęta w terminalu nadawczym dhl)",
-                
-                # Generic patterns
-                r"(Delivered|Out for delivery|In transit|Shipment picked up)",
-                r"Status:?\s*([^<>\n]+)"
+                # DHL specific patterns
+                r"przesyłka jest obsługiwana w centrum sortowania",
+                r"przesyłka przekazana kurierowi do doręczenia",
+                r"przesyłka doręczona do odbiorcy",
+                r"przesyłka przyjęta w terminalu nadawczym dhl",
+                # ...existing patterns...
             ]
             
             for pattern in patterns:
                 m = re.search(pattern, text, re.I)
                 if m:
-                    status_text = m.group(1)
+                    status_text = m.group(0)
+                    print(f"Found status with pattern:", status_text)
                     break
 
         if not status_text:
+            print("Failed to extract status")
             status_text = "Unknown / parsing failed"
 
         # Combine status and date if available
         detail = status_text
         if date_text:
             detail = f"{status_text} ({date_text})"
+            
+        print(f"Final status: {detail}")
 
     finally:
         # Always close the browser
