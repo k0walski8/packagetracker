@@ -10,7 +10,8 @@
   "requirements": [
     "beautifulsoup4==4.12.3",
     "selenium>=4.0.0",
-    "webdriver-manager>=3.8.0"
+    "webdriver-manager>=3.8.0",
+    "aiowebdriver>=1.0.0"
   ],
   "iot_class": "cloud_polling",
   "config_flow": true

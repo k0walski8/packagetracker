@@ -4,13 +4,9 @@ import json
 import re
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.chrome.options import Options
-from webdriver_manager.chrome import ChromeDriverManager
+from aiowebdriver.chrome import Chrome
+from aiowebdriver.support.ui import WebDriverWait
+from aiowebdriver.support import expected_conditions as EC
 
 from aiohttp.client import ClientSession
 from bs4 import BeautifulSoup
@@ -72,39 +68,36 @@ def _short_from_detail(detail: str) -> str:
 async def fetch_dhl(session: ClientSession, number: str) -> Dict[str, Any]:
     # Setup Chrome options
     chrome_options = Options()
-    chrome_options.add_argument("--headless")  # Run in headless mode
+    chrome_options.add_argument("--headless")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
     
-    # Initialize the driver
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
+    # Initialize the async driver
+    driver = await Chrome.launch(options=chrome_options)
     
     try:
         # Navigate to the tracking page
         url = DHL_URL.format(number=number)
-        driver.get(url)
+        await driver.get(url)
         
         # Wait for and click the submit button
-        submit_button = WebDriverWait(driver, 10).until(
+        submit_button = await WebDriverWait(driver, 10).until(
             EC.element_to_be_clickable((By.CSS_SELECTOR, ".js--tracking--input-submit"))
         )
-        submit_button.click()
+        await submit_button.click()
         
         # Wait for status message element
-        WebDriverWait(driver, 10).until(
+        await WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.CSS_SELECTOR, '.c-tracking-result--status-copy-message'))
         )
         
-        # Add debug logging
-        print(f"Extracting status for DHL package {number}")
-        
         # Get the page source after JavaScript execution
-        text = driver.page_source
+        text = await driver.page_source
         
         # Debug: Log the relevant HTML section
-        status_section = driver.find_elements(By.CSS_SELECTOR, '.c-tracking-result--section')
+        status_section = await driver.find_elements(By.CSS_SELECTOR, '.c-tracking-result--section')
         if status_section:
-            print("Found status section:", status_section[0].text)
+            print("Found status section:", (await status_section[0].text))
         
         soup = BeautifulSoup(text, "html.parser")
         
@@ -178,8 +171,7 @@ async def fetch_dhl(session: ClientSession, number: str) -> Dict[str, Any]:
         print(f"Final status: {detail}")
 
     finally:
-        # Always close the browser
-        driver.quit()
+        await driver.quit()
 
     short = _short_from_detail(detail)
     return {
