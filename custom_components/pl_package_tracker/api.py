@@ -21,7 +21,7 @@ def _short_from_detail(detail: str) -> str:
         return "Delivered"
     # Out for delivery (today)
     if any(k in t for k in ["out_for_delivery", "w doręczeniu", "kurier w drodze", 
-                           "dzisiaj doręczenie", "przekazano do doręczenia"]):
+                           "dzisiaj doręczenie", "przekazano do doręczenia", "in delivery"]):
         return "In delivery Today"
     # Label created / registered
     if any(k in t for k in ["created", "confirmed", "utworzono", "przygotowana przez nadawcę",
